@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import ReactDOM from "react-dom";
 import axios from "axios";
-import { useDropzone } from "react-dropzone";
-import { TagsInput } from "react-tag-input-component";
 
 const ListProduct = props =>{
 
@@ -37,6 +35,7 @@ const ListProduct = props =>{
         .then(res=>{
             setData(res.data.data);
             setMeta(res.data.meta);
+            console.log(res.data.meta);
             
         })
         .catch(err=>{
@@ -53,6 +52,7 @@ const ListProduct = props =>{
         else{
             getData();
         }
+
     },[])
 
 
@@ -130,7 +130,7 @@ const ListProduct = props =>{
                                             </td>
                                             <td>
                                                 <div className="btn-group btn-group-sm">
-                                                    <a href="{{ route('product.edit', 1) }}" className="btn btn-success">Edit</a>
+                                                    <a href={`/product/edit/${v?.id}`} className="btn btn-success">Edit</a>
                                                 </div>
                                             </td>
                                         </tr>

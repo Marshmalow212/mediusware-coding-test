@@ -95,42 +95,86 @@ class ProductController extends Controller
                 
             }
             
-    protected function productVariant($product_variant, $dataVariant, $variantKeys){
-        foreach ($product_variant as $variant) {
-            $dataVariant['variant_id'] = $variant['option'];
-            foreach ($variant['tags'] as $tag ) {
-                $dataVariant['variant'] = $tag;
-                $res = ProductVariant::create($dataVariant);
-                $variantKeys[$tag] = $res->id;
-            }
-        }
-        
-        return $variantKeys;        
-    }
-    
-    protected function productVariantPrice($product_variant_prices, $dataInfo, $variantKeys){
-        foreach ($product_variant_prices as $info) {
-            $dataInfo['price'] = $info['price'];
-            $dataInfo['stock'] = $info['stock'];
-            $vars = explode('/',$info['title']);
-            if($vars[0] && $variantKeys[$vars[0]]){
-                $dataInfo['product_variant_one'] = $variantKeys[$vars[0]];
-                if($vars[1] && $variantKeys[$vars[1]]){
-                    $dataInfo['product_variant_two'] = $variantKeys[$vars[1]];
-                    if($vars[2] && $variantKeys[$vars[2]]){
-                        $dataInfo['product_variant_three'] = $variantKeys[$vars[2]];
-                        
+            protected function productVariant($product_variant, $dataVariant, $variantKeys){
+                foreach ($product_variant as $variant) {
+                    $dataVariant['variant_id'] = $variant['option'];
+                    foreach ($variant['tags'] as $tag ) {
+                        $dataVariant['variant'] = $tag;
+                        $res = ProductVariant::create($dataVariant);
+                        $variantKeys[$tag] = $res->id;
                     }
-                    
                 }
+                
+                return $variantKeys;        
             }
             
-            ProductVariantPrice::create($dataInfo);
-        }
+            protected function productVariantPrice($product_variant_prices, $dataInfo, $variantKeys){
+                foreach ($product_variant_prices as $info) {
+                    $dataInfo['price'] = $info['price'];
+                    $dataInfo['stock'] = $info['stock'];
+                    $vars = explode('/',$info['title']);
+                    if($vars[0] && $variantKeys[$vars[0]]){
+                        $dataInfo['product_variant_one'] = $variantKeys[$vars[0]];
+                        if($vars[1] && $variantKeys[$vars[1]]){
+                            $dataInfo['product_variant_two'] = $variantKeys[$vars[1]];
+                            if($vars[2] && $variantKeys[$vars[2]]){
+                                $dataInfo['product_variant_three'] = $variantKeys[$vars[2]];
+                                
+                            }
+                            
+                        }
+                    }
+                    
+                    ProductVariantPrice::create($dataInfo);
+                }
+                
+            }
+            
+            /**
+             * Store a newly created resource in storage.
+             *
+             * @param \Illuminate\Http\Request $request
+             * @return \Illuminate\Http\JsonResponse
+             */
+            public function updateProduct(Request $request,$id)
+            {
+                    $validate = Validator::make($request->all(),
+                [
+                    'title' => 'string|nullable',
+                    'sku' => 'string|nullable',
+                    'description' => 'string|nullable'
+                ]);
+                try {
+                    $product = Product::find($id);
+                    DB::beginTransaction();
+                    if($request->title)$product->title = $request->title;
+                    if($request->sku)$product->sku = $request->sku;
+                    if($request->description)$product->description = $request->description;
+                    $product->save();
+                    // $product_id = $product->id;
+                    // $product_title = $product->title;
+                    // $product_variant = $request->product_variant;
+                    // $variantKeys = [];
+                    // $dataVariant = ["product_id"=>$product_id];
+                    // $dataInfo = ['product_id'=> $product_id];
+                    // $product_variant_prices = $request->product_variant_prices;
         
-    }
-    
-    // ---------------------------------------
+                    // $variantKeys = $this->productVariant($product_variant, $dataVariant , $variantKeys);
+                    // $this->productVariantPrice($product_variant_prices, $dataInfo, $variantKeys);
+                    DB::commit();
+                    return response()->json(['message'=>'Product Updated!'],200);
+                    
+                } catch (\Throwable $th) {
+                    //throw $th;
+                    DB::rollback();
+                    Log::error('ProductController update Method ',$th->getTrace());
+                    return response()->json(['message'=>'Something Wrong!'],400);
+                }
+                
+           
+                        
+         }
+            // ---------------------------------------
     // Get All Products
     // @param limit 
     // @param page 
@@ -140,21 +184,32 @@ class ProductController extends Controller
         $page = $request->page ?? 1;
         $offset = ($page - 1) * $limit;
         $product_count = Product::count();
+        $price_max = ProductVariantPrice::all()->max('price');
+        $price_min = ProductVariantPrice::all()->min('price');
+        $title = $request->title ?? '';
+        $min = $request->min ?? '';
+        $max = $request->max ?? '';
+        $date = $request->date ?? '';
+
+
         $products = Product::with('variant_price')
         ->offset($offset)
         ->limit($limit)
         ->get();
+        
         $meta = [
             'total'=>$product_count,
             'limit'=>$limit,
             'page' => $page,
-            'offset'=>$offset
+            'offset'=>$offset,
+            'priceMax'=>$price_max,
+            'priceMin'=>$price_min
         ];
-
+        
         return response()->json(['data'=>$products,'meta'=>$meta]);
     }
-
-
+    
+    
     /**
      * Display the specified resource.
      *
@@ -165,17 +220,26 @@ class ProductController extends Controller
     {
         
     }
-
-
+    
+    
     /**
      * Display the specified resource.
      *
      * @param \App\Models\Product $product
      * @return \Illuminate\Http\Response
      */
-    public function show($product)
+    public function show($id)
     {
-
+        try {
+            $product = Product::with('variant_price')
+            ->where('id',$id)
+            ->first();
+            return response()->json(['message'=>'Product Found!','data'=>$product],200);
+        } catch (\Throwable $th) {
+            //throw $th;
+            Log::error('productcontroller show ',$th->getTrace());
+            return response()->json(['message'=>'Something Wrong!'],400);
+        }
     }
 
     /**
@@ -184,10 +248,10 @@ class ProductController extends Controller
      * @param \App\Models\Product $product
      * @return \Illuminate\Http\Response
      */
-    public function edit(Product $product)
+    public function edit($id)
     {
         $variants = Variant::all();
-        return view('products.edit', compact('variants'));
+        return view('products.edit', compact('variants','id'));
     }
 
     /**

@@ -16,5 +16,14 @@ class Product extends Model
         return $this->hasMany(ProductVariantPrice::class,'product_id','id')
         ->with('variant_one','variant_two','variant_three');
     }
+    
+    public function with_price_range($min,$max){
+        return $this->hasMany(ProductVariantPrice::class,'product_id','id')
+        ->with('variant_one','variant_two','variant_three')
+        ->where('price','>=',$min)
+        ->andWhere('price','<=',$max)
+        ->orderBy('price');
+        
+    }
 
 }
