@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ProductController;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,3 +20,8 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 });
 
 Route::get('/variants', 'Api\VariantController@index');
+
+Route::post('/product', [ProductController::class,'store']);
+Route::put('/product/{id}', [ProductController::class,'updateProduct']);
+Route::get('/products', [ProductController::class,'getAll']);
+Route::get('/product/{id}', [ProductController::class,'show']);

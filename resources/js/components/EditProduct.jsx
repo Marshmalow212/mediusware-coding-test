@@ -35,7 +35,7 @@ const img = {
     height: "100%"
 };
 
-const CreateProduct = () => {
+const EditProduct = (props) => {
     const [status,setStatus] = useState(false);
     const [variants, setVariants] = useState([]);
     const [formData, setFormData] = useState({
@@ -46,6 +46,8 @@ const CreateProduct = () => {
         product_variant: [],
         product_variant_prices: []
     });
+    const [data,setData] = useState({});
+    const [priceVariant,setPriceVariant] = useState([]);
 
     const onDrop = useCallback(acceptedFiles => {
         const images = acceptedFiles.map(file =>
@@ -191,7 +193,7 @@ const CreateProduct = () => {
         };
 
         axios
-            .post("/product", product)
+            .put("http://localhost:8000/api/product/"+data.id, product)
             .then(res => {
                 console.log(res.data);
                 if(res.status == 200){
@@ -210,7 +212,29 @@ const CreateProduct = () => {
         console.log(product);
     };
 
+
+    //get data by id
+    const getDataById = id=>{
+        axios.get('/product/'+id)
+        .then(res=>{
+            setData(res.data.data);
+            // console.log(res.data.data);
+        })
+        .catch(err=>{
+            console.log(err);
+        })
+    }
+
     useEffect(() => {
+        let data_id = $('#editProduct').attr("data-id");
+        getDataById(data_id);
+
+        setFormData(prevState => ({
+            ...prevState,
+            product_title: data.title,
+            proudct_sku: data.sku,
+            description: data.description
+        }));
         axios.get("/api/variants").then(response => {
             setFormData(prevState => ({
                 ...prevState,
@@ -227,6 +251,7 @@ const CreateProduct = () => {
 
     // check product_variant_price when product_variant changed
     useEffect(() => {
+        setPriceVariant(data.variant_price);
         checkVariant();
     }, [formData.product_variant]);
 
@@ -249,7 +274,7 @@ const CreateProduct = () => {
         <section>
             {status?(
                 <div className="alert alert-success">
-                    <h2>Product Created!</h2>
+                    <h2>Product Updated!</h2>
                 </div>
             ):''}
             <div className="row">
@@ -262,6 +287,7 @@ const CreateProduct = () => {
                                     type="text"
                                     placeholder="Product Name"
                                     className="form-control"
+                                    defaultValue = {data?.title}
                                     onChange={e =>
                                         onInputChange(
                                             "product_name",
@@ -274,8 +300,9 @@ const CreateProduct = () => {
                                 <label htmlFor="">Product SKU</label>
                                 <input
                                     type="text"
-                                    placeholder="Product Name"
+                                    placeholder="Product SKU"
                                     className="form-control"
+                                    defaultValue={data?.sku}
                                     onChange={e =>
                                         onInputChange(
                                             "product_sku",
@@ -291,6 +318,7 @@ const CreateProduct = () => {
                                     cols="30"
                                     rows="4"
                                     className="form-control"
+                                    defaultValue={data?.description}
                                     onChange={e =>
                                         onInputChange(
                                             "description",
@@ -403,18 +431,20 @@ const CreateProduct = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {formData.product_variant_prices.map(
-                                            (variant_price, index) => (
+                                        {priceVariant?.map(
+                                            (value, index) => (
                                                 <tr>
                                                     <td>
-                                                        {variant_price.title}
+                                                        {value?.variant_one?.variant}/
+                                                        {value?.variant_two?.variant}/
+                                                        {value?.variant_three?.variant}
                                                     </td>
                                                     <td>
                                                         <input
                                                             type="text"
                                                             className="form-control"
                                                             value={
-                                                                variant_price.price
+                                                                value?.price
                                                             }
                                                             onChange={e =>
                                                                 handleVariantPriceChange(
@@ -435,7 +465,7 @@ const CreateProduct = () => {
                                                             type="text"
                                                             className="form-control"
                                                             value={
-                                                                variant_price.stock
+                                                                value?.stock
                                                             }
                                                             onChange={e =>
                                                                 handleVariantPriceChange(
@@ -476,8 +506,8 @@ const CreateProduct = () => {
     );
 };
 
-const element = document.getElementById("createProduct");
+const element = document.getElementById("editProduct");
 
 if (element) {
-    ReactDOM.render(<CreateProduct />, element);
+    ReactDOM.render(<EditProduct />, element);
 }
