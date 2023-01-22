@@ -36,6 +36,7 @@ const img = {
 };
 
 const CreateProduct = () => {
+    const [status,setStatus] = useState(false);
     const [variants, setVariants] = useState([]);
     const [formData, setFormData] = useState({
         product_name: "",
@@ -191,8 +192,16 @@ const CreateProduct = () => {
 
         axios
             .post("/product", product)
-            .then(response => {
-                console.log(response.data);
+            .then(res => {
+                console.log(res.data);
+                if(res.status == 200){
+                    setStatus(true);
+                    setTimeout(()=>{
+                        
+                        setStatus(false);
+                        window.location.replace('/product');
+                    },2000);
+                }
             })
             .catch(error => {
                 console.log(error);
@@ -238,6 +247,11 @@ const CreateProduct = () => {
 
     return (
         <section>
+            {status?(
+                <div className="alert alert-success">
+                    <h2>Product Created!</h2>
+                </div>
+            ):''}
             <div className="row">
                 <div className="col-md-6">
                     <div className="card shadow mb-4">
